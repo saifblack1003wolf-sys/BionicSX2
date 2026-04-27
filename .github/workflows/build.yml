@@ -13,18 +13,17 @@ jobs:
       - name: Extract MoltenVK
         run: |
           tar -xf MoltenVK.tar
-      - name: Create Frameworks directory
+      - name: Setup Frameworks
         run: |
           mkdir -p Frameworks
-      - name: Move MoltenVK framework
-        run: |
-          find . -path "*/ios-arm64/MoltenVK.framework" -exec cp -R {} ./Frameworks/ \;
+          cp -Ra MoltenVK/MoltenVK/static/MoltenVK.xcframework/ios-arm64/MoltenVK.framework Frameworks/
+          rm -rf MoltenVK/
       - name: Verify Frameworks
         run: |
           ls -R $GITHUB_WORKSPACE/Frameworks
       - name: CMake Configure
         run: |
-          cmake -B build -G Xcode -DCMAKE_SYSTEM_NAME=iOS -DCMAKE_OSX_ARCHITECTURES=arm64 -DCMAKE_FRAMEWORK_PATH=$GITHUB_WORKSPACE/Frameworks -DMoltenVK_FRAMEWORK_PATH=$GITHUB_WORKSPACE/Frameworks/MoltenVK.framework
+          cmake -B build -G Xcode -DCMAKE_SYSTEM_NAME=iOS -DCMAKE_OSX_ARCHITECTURES=arm64 -DCMAKE_FRAMEWORK_PATH=$GITHUB_WORKSPACE/Frameworks -DMoltenVK_FRAMEWORK_PATH=$GITHUB_WORKSPACE/Frameworks/MoltenVK.framework -DCMAKE_OSX_SYSROOT=iphoneos -DCMAKE_XCODE_ATTRIBUTE_ONLY_ACTIVE_ARCH=YES
       - name: Build
         run: |
           cmake --build build --config Release --target iPSX2
