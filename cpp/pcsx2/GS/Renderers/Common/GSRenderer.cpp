@@ -586,7 +586,12 @@ bool GSRenderer::BeginPresentFrame(bool frame_skip)
 	if (s_last_gpu_reset_time != 0 &&
 		Common::Timer::ConvertValueToSeconds(current_time - s_last_gpu_reset_time) < 15.0f)
 	{
+#if defined(__APPLE__) && TARGET_OS_IPHONE
+		Console.Error("iOS: Host GPU lost too many times, but skipping abort on iOS.");
+		return false;
+#else
 		pxFailRel("Host GPU lost too many times, device is probably completely wedged.");
+#endif
 	}
 	s_last_gpu_reset_time = current_time;
 
@@ -594,8 +599,13 @@ bool GSRenderer::BeginPresentFrame(bool frame_skip)
 	// Let's just toss out everything, and try to hobble on.
 	if (!GSreopen(true, false, GSGetCurrentRenderer(), std::nullopt))
 	{
+#if defined(__APPLE__) && TARGET_OS_IPHONE
+		Console.Error("iOS: Failed to recreate GS device after loss, continuing with degraded rendering.");
+		return false;
+#else
 		pxFailRel("Failed to recreate GS device after loss.");
 		return false;
+#endif
 	}
 
 	// First frame after reopening is definitely going to be trash, so skip it.

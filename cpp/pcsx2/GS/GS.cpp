@@ -329,9 +329,15 @@ bool GSreopen(bool recreate_device, bool recreate_renderer, GSRendererType new_r
 
 			if (!OpenGSDevice(GSConfig.Renderer, false, recreate_window, vsync_mode, allow_present_throttle))
 			{
+#if defined(__APPLE__) && TARGET_OS_IPHONE
+				Console.Error("iOS: Failed to reopen GS on old config. Continuing with degraded state.");
+				Host::ReleaseRenderWindow();
+				return false;
+#else
 				pxFailRel("Failed to reopen GS on old config");
 				Host::ReleaseRenderWindow();
 				return false;
+#endif
 			}
 		}
 	}
