@@ -142,6 +142,7 @@ jobs:
             -DCMAKE_XCODE_ATTRIBUTE_CODE_SIGNING_REQUIRED=NO \
             -DCMAKE_XCODE_ATTRIBUTE_CODE_SIGNING_ALLOWED=NO \
             "-DCMAKE_XCODE_ATTRIBUTE_CODE_SIGN_IDENTITY=" \
+            -DCMAKE_INSTALL_RPATH="@executable_path/Frameworks" \
             "-DMOLTENVK_FRAMEWORK_PATH=${MOLTENVK_FRAMEWORK_PATH}" \
             "-DCMAKE_PREFIX_PATH=${MOLTENVK_FRAMEWORK_PATH}" \
             --fresh 2>&1 | tee /tmp/cmake_configure.log
@@ -247,6 +248,11 @@ jobs:
           cp -rP "$APP_PATH" "$IPA_DIR/Payload/"
           APP_NAME=$(basename "$APP_PATH")
           echo "Copied $APP_NAME into Payload/"
+
+          # Copy MoltenVK.framework into the app's Frameworks directory
+          mkdir -p "$IPA_DIR/Payload/$APP_NAME/Frameworks"
+          cp -rP "${{ github.workspace }}/Frameworks/MoltenVK.framework" "$IPA_DIR/Payload/$APP_NAME/Frameworks/"
+          echo "Copied MoltenVK.framework into Payload/$APP_NAME/Frameworks/"
 
           SWIFT_LIBS_DIR="$(xcode-select -p)/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/iphoneos"
           FRAMEWORKS_DIR="$IPA_DIR/Payload/$APP_NAME/Frameworks"
