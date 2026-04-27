@@ -572,23 +572,27 @@ void* HostSys::MapSharedMemory(void* handle, size_t offset, void* baseaddr, size
     if (handle == (void*)0xDEADBEEF)
     {
         void* ptr = Mmap(baseaddr, size, mode);
-        // [P47] Save base for fastmem remap source (first call = data memory)
-        if (ptr && !s_ios_shared_data_base)
+        // [P47] Save base for fastmem remap source (data memory).
+        // If memory is reallocated after an emulator reset or fastmem reset,
+        // update the cached source pointer so fastmem remaps use the current data backing.
+        if (ptr)
             s_ios_shared_data_base = static_cast<u8*>(ptr);
         return ptr;
     }
-	return nullptr;
+    return nullptr;
 #endif
 }
 
 void HostSys::UnmapSharedMemory(void* baseaddr, size_t size)
 {
 #if !TARGET_OS_IPHONE
-	const kern_return_t res = mach_vm_deallocate(mach_task_self(), reinterpret_cast<mach_vm_address_t>(baseaddr), size);
-	if (res != KERN_SUCCESS)
-		pxFailRel("Failed to unmap shared memory");
+    const kern_return_t res = mach_vm_deallocate(mach_task_self(), reinterpret_cast<mach_vm_address_t>(baseaddr), size);
+    if (res != KERN_SUCCESS)
+        pxFailRel("Failed to unmap shared memory");
 #else
-	munmap(baseaddr, size);
+    if (baseaddr == s_ios_shared_data_base)
+        s_ios_shared_data_base = nullptr;
+    munmap(baseaddr, size);
 #endif
 }
 
