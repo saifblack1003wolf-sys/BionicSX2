@@ -64,11 +64,21 @@ jobs:
       # ──────────────────────────────────────────────────────────────────────────
       - name: Download MoltenVK SDK
         run: |
-          curl -L https://github.com/KhronosGroup/MoltenVK/releases/download/v1.4.1/MoltenVK-ios.framework.zip -o MoltenVK-ios.framework.zip
-          unzip MoltenVK-ios.framework.zip
+          curl -L https://github.com/KhronosGroup/MoltenVK/releases/download/v1.4.1/MoltenVK-ios.tar -o MoltenVK-ios.tar
+          tar -xf MoltenVK-ios.tar
           mkdir -p Frameworks
-          cp -r MoltenVK.framework Frameworks/
-          echo "✅ MoltenVK.framework extracted to: $(pwd)/Frameworks"
+          # Copy MoltenVK.xcframework or MoltenVK.framework to Frameworks
+          if [ -d "MoltenVK.xcframework" ]; then
+            cp -r MoltenVK.xcframework Frameworks/
+            echo "✅ MoltenVK.xcframework extracted to: $(pwd)/Frameworks"
+          elif [ -d "MoltenVK.framework" ]; then
+            cp -r MoltenVK.framework Frameworks/
+            echo "✅ MoltenVK.framework extracted to: $(pwd)/Frameworks"
+          else
+            echo "❌ Neither MoltenVK.xcframework nor MoltenVK.framework found in extracted files"
+            ls -la
+            exit 1
+          fi
           echo "MOLTENVK_FRAMEWORK_PATH=$(pwd)/Frameworks" >> $GITHUB_ENV
 
       # ──────────────────────────────────────────────────────────────────────────
