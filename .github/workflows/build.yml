@@ -1,4 +1,4 @@
-name: Build iPSX2 M4 Optimized
+name: Build iPSX2 M4 Final
 on: [push, workflow_dispatch]
 jobs:
   build:
@@ -8,22 +8,33 @@ jobs:
         with:
           submodules: recursive
       
-      - name: Clean Environment
-        run: |
-          rm -rf build/
-          rm -rf Frameworks/
-          
-      - name: Setup MoltenVK 1.4.1 (iOS ONLY)
+      - name: Setup MoltenVK 1.4.1 (STRIP NON-IOS)
         run: |
           curl -L https://github.com/KhronosGroup/MoltenVK/releases/download/v1.4.1/MoltenVK-ios.tar -o MoltenVK.tar
           tar -xf MoltenVK.tar
           mkdir -p Frameworks
-          # سحب نسخة الآيفون حصراً وحذف البقية
+          
+          # خطوة الحسم: سحب نسخة الآيفون الحقيقية فقط
           cp -Ra MoltenVK/MoltenVK/static/MoltenVK.xcframework/ios-arm64/MoltenVK.framework Frameworks/
+          
+          # حذف كل المجلدات الأصلية تماماً لضمان عدم حدوث تضارب معماري
           rm -rf MoltenVK/
           rm -rf MoltenVK.tar
+          
+          echo "Verified: Only iOS Framework exists now."
+          ls -R Frameworks/
 
-      - name: CMake Configuration
+      - name: CMake Build
         run: |
-          cmake -B build -G Xcode             -DCMAKE_SYSTEM_NAME=iOS             -DCMAKE_OSX_ARCHITECTURES=arm64             -DCMAKE_OSX_SYSROOT=iphoneos             -DCMAKE_FRAMEWORK_PATH=$(pwd)/Frameworks             -DMoltenVK_FRAMEWORK_PATH=$(pwd)/Frameworks/MoltenVK.framework
+          # مسح أي كاش قديم
+          rm -rf build/
+          
+          cmake -B build -G Xcode \
+            -DCMAKE_SYSTEM_NAME=iOS \
+            -DCMAKE_OSX_ARCHITECTURES=arm64 \
+            -DCMAKE_OSX_SYSROOT=iphoneos \
+            -DCMAKE_FRAMEWORK_PATH=$(pwd)/Frameworks \
+            -DMoltenVK_FRAMEWORK_PATH=$(pwd)/Frameworks/MoltenVK.framework \
+            -DCMAKE_XCODE_ATTRIBUTE_ONLY_ACTIVE_ARCH=YES
+            
           cmake --build build --config Release --target iPSX2
