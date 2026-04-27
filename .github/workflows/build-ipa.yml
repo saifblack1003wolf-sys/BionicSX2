@@ -61,16 +61,50 @@ jobs:
       # ──────────────────────────────────────────────────────────────────────────
       # 4.5 Download and extract MoltenVK SDK
       #      MoltenVK is required for Vulkan support on iOS (provides Metal backend)
+      #      Uses dynamic 'find' to locate ios-arm64, then purges all other files.
       # ──────────────────────────────────────────────────────────────────────────
       - name: Download MoltenVK SDK
         run: |
+          set -euo pipefail
+          
+          # Download and extract
+          echo "📥 Downloading MoltenVK v1.4.1..."
           curl -L https://github.com/KhronosGroup/MoltenVK/releases/download/v1.4.1/MoltenVK-ios.tar -o MoltenVK-ios.tar
+          echo "📦 Extracting tarball..."
           tar -xf MoltenVK-ios.tar
+          
+          # Dynamically find the ios-arm64 framework using find
+          echo "🔍 Searching for ios-arm64 MoltenVK.framework..."
+          IOS_ARM64_FRAMEWORK=$(find . -type d -path "*/ios-arm64/MoltenVK.framework" | head -1)
+          
+          if [[ -z "$IOS_ARM64_FRAMEWORK" ]]; then
+            echo "❌ ERROR: Could not find ios-arm64/MoltenVK.framework in extracted archive"
+            echo "Archive contents:"
+            find . -type d -name "*.framework" | head -20
+            exit 1
+          fi
+          
+          echo "✅ Found framework at: $IOS_ARM64_FRAMEWORK"
+          
+          # Create clean Frameworks directory and copy ONLY the ios-arm64 version
+          rm -rf Frameworks
           mkdir -p Frameworks
-          # Extract the iOS framework from the xcframework
-          mv MoltenVK/MoltenVK/static/MoltenVK.xcframework/ios-arm64/MoltenVK.framework Frameworks/
-          echo "✅ MoltenVK.framework moved to: $(pwd)/Frameworks"
-          echo "MOLTENVK_FRAMEWORK_PATH=$(pwd)/Frameworks" >> $GITHUB_ENV
+          cp -Ra "$IOS_ARM64_FRAMEWORK" Frameworks/
+          echo "✅ Copied MoltenVK.framework to Frameworks/"
+          
+          # CRITICAL: Delete ALL extracted files to prevent CMake from linking macOS version
+          echo "🧹 Cleaning up extracted files..."
+          rm -rf MoltenVK/
+          rm -f MoltenVK-ios.tar
+          
+          # Verify cleanup and final structure
+          echo "✅ Final Frameworks structure:"
+          ls -Ra Frameworks/
+          
+          # Set environment variable for CMake
+          FRAMEWORKS_PATH="$(cd Frameworks && pwd)"
+          echo "MOLTENVK_FRAMEWORK_PATH=${FRAMEWORKS_PATH}" >> $GITHUB_ENV
+          echo "✅ MOLTENVK_FRAMEWORK_PATH set to: ${FRAMEWORKS_PATH}"
 
       # ──────────────────────────────────────────────────────────────────────────
       # 5. CMake configure
@@ -109,6 +143,7 @@ jobs:
             -DCMAKE_XCODE_ATTRIBUTE_CODE_SIGNING_ALLOWED=NO \
             "-DCMAKE_XCODE_ATTRIBUTE_CODE_SIGN_IDENTITY=" \
             "-DMOLTENVK_FRAMEWORK_PATH=${MOLTENVK_FRAMEWORK_PATH}" \
+            "-DCMAKE_PREFIX_PATH=${MOLTENVK_FRAMEWORK_PATH}" \
             --fresh 2>&1 | tee /tmp/cmake_configure.log
           # Verify exit code — 'tee' can swallow it; re-check the log for errors
           if grep -q "^CMake Error" /tmp/cmake_configure.log; then
