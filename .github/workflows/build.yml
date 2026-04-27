@@ -58,6 +58,7 @@ jobs:
             -DCMAKE_SYSTEM_NAME=iOS \
             -DCMAKE_OSX_SYSROOT=iphoneos \
             -DCMAKE_OSX_ARCHITECTURES=arm64 \
+            -DCMAKE_INSTALL_RPATH="@executable_path/Frameworks" \
             -DCMAKE_XCODE_ATTRIBUTE_ONLY_ACTIVE_ARCH=YES \
             "-DMOLTENVK_FRAMEWORK_PATH=${FRAMEWORKS_PATH}" \
             "-DCMAKE_PREFIX_PATH=${FRAMEWORKS_PATH}" \
