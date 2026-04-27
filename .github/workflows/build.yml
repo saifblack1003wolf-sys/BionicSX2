@@ -1,1 +1,22 @@
-# Build ID: 6674
+name: Build iPSX2 iOS
+on: [push, workflow_dispatch]
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: Download and Force-Link MoltenVK
+        run: |
+          curl -L https://github.com/KhronosGroup/MoltenVK/releases/download/v1.4.1/MoltenVK-ios.tar -o MoltenVK.tar
+          tar -xf MoltenVK.tar
+          mkdir -p Frameworks
+          # هذا السطر السحري يبحث عن ملف الآيفون الحقيقي وينقله للمكان المطلوب
+          find . -name "MoltenVK.framework" -path "*/ios-arm64/*" -exec cp -r {} Frameworks/ \;
+          echo "Checked Frameworks folder:"
+          ls -R Frameworks/
+      - name: CMake Configure
+        run: |
+          cmake -B build -G Xcode -DCMAKE_SYSTEM_NAME=iOS -DCMAKE_OSX_ARCHITECTURES=arm64 -DCMAKE_FRAMEWORK_PATH=$(pwd)/Frameworks -DMoltenVK_FRAMEWORK_PATH=$(pwd)/Frameworks/MoltenVK.framework
+          cmake --build build --config Release --target iPSX2
