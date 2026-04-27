@@ -21,3 +21,4 @@ To build your own installer package:
 3. Select the **Build Unsigned iPSX2.ipa** workflow and click **Run workflow**.
 4. Once completed, download the `iPSX2-unsigned` artifact ZIP at the bottom of the workflow summary.
 5. Extract the `.ipa` file and sideload it to your device using your preferred signing tool (e.g., AltStore, TrollStore, Sideloadly).Build Token: 25143
+Update Stamp: Mon Apr 27 05:21:42 UTC 2026
