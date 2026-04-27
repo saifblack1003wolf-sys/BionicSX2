@@ -24,9 +24,9 @@ if(CMAKE_SYSTEM_NAME STREQUAL "iOS")
 	# This helps CMake find system frameworks like CoreFoundation, Metal, etc.
 	set(CMAKE_FRAMEWORK_PATH "${CMAKE_OSX_SYSROOT}/System/Library/Frameworks")
 	
-	# MoltenVK framework path - will be enhanced by CMake variables from workflow
-	if(MoltenVK_ROOT_DIR)
-		list(APPEND CMAKE_FRAMEWORK_PATH "${MoltenVK_ROOT_DIR}/MoltenVK")
+	# MoltenVK framework path - will be provided by CMake variable from workflow
+	if(MOLTENVK_FRAMEWORK_PATH)
+		list(APPEND CMAKE_FRAMEWORK_PATH "${MOLTENVK_FRAMEWORK_PATH}")
 	endif()
 	
 	# Tell CMake to look for resources in iOS-specific locations

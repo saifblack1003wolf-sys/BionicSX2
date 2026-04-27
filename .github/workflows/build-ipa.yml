@@ -64,24 +64,12 @@ jobs:
       # ──────────────────────────────────────────────────────────────────────────
       - name: Download MoltenVK SDK
         run: |
-          set -euo pipefail
-          MOLTENVK_VERSION="1.2.11"
-          MOLTENVK_DIR="${GITHUB_WORKSPACE}/MoltenVK"
-          mkdir -p "$MOLTENVK_DIR"
-          
-          echo "Downloading MoltenVK SDK v${MOLTENVK_VERSION}..."
-          curl -sL "https://github.com/KhronosGroup/MoltenVK/releases/download/v${MOLTENVK_VERSION}/MoltenVK-macos.tar.gz" \
-            -o /tmp/moltenvk.tar.gz
-          
-          tar -xzf /tmp/moltenvk.tar.gz -C "$MOLTENVK_DIR" --strip-components=1
-          
-          if [ ! -d "$MOLTENVK_DIR/MoltenVK/MoltenVK.xcframework" ]; then
-            echo "❌ MoltenVK.xcframework not found after extraction!"
-            exit 1
-          fi
-          
-          echo "✅ MoltenVK SDK extracted to: $MOLTENVK_DIR"
-          echo "MOLTENVK_DIR=$MOLTENVK_DIR" >> $GITHUB_ENV
+          curl -L https://github.com/KhronosGroup/MoltenVK/releases/download/v1.2.11/MoltenVK-all.tar -o MoltenVK.tar
+          tar -xf MoltenVK.tar
+          mkdir -p Frameworks
+          cp -r MoltenVK/MoltenVK/iOS/framework/MoltenVK.framework Frameworks/
+          echo "✅ MoltenVK.framework extracted to: $(pwd)/Frameworks"
+          echo "MOLTENVK_FRAMEWORK_PATH=$(pwd)/Frameworks" >> $GITHUB_ENV
 
       # ──────────────────────────────────────────────────────────────────────────
       # 5. CMake configure
@@ -119,7 +107,7 @@ jobs:
             -DCMAKE_XCODE_ATTRIBUTE_CODE_SIGNING_REQUIRED=NO \
             -DCMAKE_XCODE_ATTRIBUTE_CODE_SIGNING_ALLOWED=NO \
             "-DCMAKE_XCODE_ATTRIBUTE_CODE_SIGN_IDENTITY=" \
-            "-CMoltenVK_ROOT_DIR=${MOLTENVK_DIR}" \
+            "-DMOLTENVK_FRAMEWORK_PATH=${MOLTENVK_FRAMEWORK_PATH}" \
             --fresh 2>&1 | tee /tmp/cmake_configure.log
           # Verify exit code — 'tee' can swallow it; re-check the log for errors
           if grep -q "^CMake Error" /tmp/cmake_configure.log; then

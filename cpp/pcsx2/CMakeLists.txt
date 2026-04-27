@@ -681,30 +681,30 @@ if(USE_VULKAN)
 	
 	# On iOS, link against MoltenVK framework for Vulkan support
 	if(CMAKE_SYSTEM_NAME STREQUAL "iOS")
-		# Locate MoltenVK if provided via CMake variable
-		if(MoltenVK_ROOT_DIR)
-			set(MOLTENVK_XCFRAMEWORK_PATH "${MoltenVK_ROOT_DIR}/MoltenVK/MoltenVK.xcframework")
-			if(NOT EXISTS "${MOLTENVK_XCFRAMEWORK_PATH}")
-				message(FATAL_ERROR "MoltenVK.xcframework not found at: ${MOLTENVK_XCFRAMEWORK_PATH}")
+		# Locate MoltenVK framework
+		if(MOLTENVK_FRAMEWORK_PATH)
+			set(MOLTENVK_FRAMEWORK "${MOLTENVK_FRAMEWORK_PATH}/MoltenVK.framework")
+			if(NOT EXISTS "${MOLTENVK_FRAMEWORK}")
+				message(FATAL_ERROR "MoltenVK.framework not found at: ${MOLTENVK_FRAMEWORK}")
 			endif()
 		else()
-			# Fallback: check system locations
-			find_path(MOLTENVK_XCFRAMEWORK_PATH
-				NAMES "MoltenVK.xcframework"
-				PATHS "/usr/local/lib" "/usr/local/Cellar" "${CMAKE_PREFIX_PATH}"
+			# Fallback: check common installation paths
+			find_path(MOLTENVK_FRAMEWORK
+				NAMES "MoltenVK.framework"
+				PATHS "/usr/local/lib" "/usr/local/Cellar" "${CMAKE_PREFIX_PATH}" "$ENV{HOME}/MoltenVK/Frameworks"
 				NO_DEFAULT_PATH
 			)
-			if(NOT MOLTENVK_XCFRAMEWORK_PATH)
-				message(FATAL_ERROR "MoltenVK SDK not found. Please provide -CMoltenVK_ROOT_DIR=<path> or install globally.")
+			if(NOT MOLTENVK_FRAMEWORK)
+				message(FATAL_ERROR "MoltenVK.framework not found. Please provide -DMOLTENVK_FRAMEWORK_PATH=<path> or install globally.")
 			endif()
 		endif()
 		
-		# Link the MoltenVK framework and set required flags
+		# Link the MoltenVK framework
 		target_link_libraries(PCSX2_FLAGS INTERFACE "-framework MoltenVK")
-		target_link_libraries(PCSX2_FLAGS INTERFACE "-F${MoltenVK_ROOT_DIR}/MoltenVK")
-		target_include_directories(PCSX2_FLAGS INTERFACE "${MOLTENVK_XCFRAMEWORK_PATH}/ios-arm64/MoltenVK.framework/Headers")
+		target_link_directories(PCSX2_FLAGS INTERFACE "${MOLTENVK_FRAMEWORK_PATH}")
+		target_include_directories(PCSX2_FLAGS INTERFACE "${MOLTENVK_FRAMEWORK}/Headers")
 		
-		message(STATUS "MoltenVK linked for iOS: ${MOLTENVK_XCFRAMEWORK_PATH}")
+		message(STATUS "MoltenVK framework linked for iOS: ${MOLTENVK_FRAMEWORK}")
 	endif()
 endif()
 
