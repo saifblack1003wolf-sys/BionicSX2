@@ -67,9 +67,9 @@ jobs:
           curl -L https://github.com/KhronosGroup/MoltenVK/releases/download/v1.4.1/MoltenVK-ios.tar -o MoltenVK-ios.tar
           tar -xf MoltenVK-ios.tar
           mkdir -p Frameworks
-          # Move the framework from the correct path
-          mv MoltenVK/MoltenVK/static/MoltenVK.xcframework Frameworks/
-          echo "✅ MoltenVK.xcframework moved to: $(pwd)/Frameworks"
+          # Extract the iOS framework from the xcframework
+          mv MoltenVK/MoltenVK/static/MoltenVK.xcframework/ios-arm64/MoltenVK.framework Frameworks/
+          echo "✅ MoltenVK.framework moved to: $(pwd)/Frameworks"
           echo "MOLTENVK_FRAMEWORK_PATH=$(pwd)/Frameworks" >> $GITHUB_ENV
 
       # ──────────────────────────────────────────────────────────────────────────
