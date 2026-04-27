@@ -54,7 +54,12 @@ VKStreamBuffer& VKStreamBuffer::operator=(VKStreamBuffer&& move)
 
 bool VKStreamBuffer::Create(VkBufferUsageFlags usage, u32 size)
 {
-	const VkBufferCreateInfo bci = {VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO, nullptr, 0, static_cast<VkDeviceSize>(size),
+	// Ensure buffer size is aligned for systems with 16KB pages (e.g., Apple M4)
+	// This prevents alignment issues on ARM64 platforms
+	const u32 SYSTEM_PAGE_ALIGNMENT = 16384;  // 16KB for Apple Silicon
+	u32 aligned_size = ((size + SYSTEM_PAGE_ALIGNMENT - 1) / SYSTEM_PAGE_ALIGNMENT) * SYSTEM_PAGE_ALIGNMENT;
+	
+	const VkBufferCreateInfo bci = {VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO, nullptr, 0, static_cast<VkDeviceSize>(aligned_size),
 		usage, VK_SHARING_MODE_EXCLUSIVE, 0, nullptr};
 
 	VmaAllocationCreateInfo aci = {};
@@ -62,6 +67,12 @@ bool VKStreamBuffer::Create(VkBufferUsageFlags usage, u32 size)
 #ifdef VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT
 	// Hint the allocator that we write sequentially from CPU to GPU
 	aci.flags |= VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
+#endif
+#ifdef __arm64__
+	// On Apple Silicon (M1/M2/M3/M4), hint the allocator to use proper 16KB alignment
+	#ifdef VMA_ALLOCATION_CREATE_STRATEGY_BEST_FIT_BIT
+	aci.flags |= VMA_ALLOCATION_CREATE_STRATEGY_BEST_FIT_BIT;
+	#endif
 #endif
 	aci.usage = VMA_MEMORY_USAGE_CPU_TO_GPU;
 	aci.preferredFlags = VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;

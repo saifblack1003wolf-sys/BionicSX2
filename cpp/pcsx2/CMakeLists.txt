@@ -27,10 +27,12 @@ if(CMAKE_SYSTEM_NAME STREQUAL "iOS")
 	target_compile_definitions(PCSX2_FLAGS INTERFACE
 		"_M_ARM64=1"
 	)
+	# Vulkan files need Objective-C++ compilation on iOS for MoltenVK integration
+	# and proper interop with Apple platform APIs
 	set_source_files_properties(
 		GS/Renderers/Vulkan/GSDeviceVK.cpp
 		GS/Renderers/Vulkan/VKSwapChain.cpp
-		PROPERTIES COMPILE_FLAGS "-x objective-c++"
+		PROPERTIES LANGUAGE OBJCXX
 	)
 endif()
 

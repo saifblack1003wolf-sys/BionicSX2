@@ -9,11 +9,19 @@
 #ifdef __APPLE__
 	#include <mach/vm_page_size.h>
 	#undef PAGE_SIZE
+	// Apple Silicon (M1/M2/M3/M4) uses 16KB system page size
+	#ifdef __arm64__
+		#define SYSTEM_PAGE_SIZE 16384u  // 16KB for ARM64 (M-series)
+	#else
+		#define SYSTEM_PAGE_SIZE 4096u   // 4KB for Intel
+	#endif
+#else
+	#define SYSTEM_PAGE_SIZE 4096u  // Default to 4KB
 #endif
 
 #define VM_SIZE 4194304u
 #define HALF_VM_SIZE (VM_SIZE / 2u)
-#define PAGE_SIZE 8192u
+#define PAGE_SIZE 8192u           // PS2 internal page size (remains 8KB)
 #define BLOCK_SIZE 256u
 #define COLUMN_SIZE 64u
 #define BLOCKS_PER_PAGE (PAGE_SIZE / BLOCK_SIZE)

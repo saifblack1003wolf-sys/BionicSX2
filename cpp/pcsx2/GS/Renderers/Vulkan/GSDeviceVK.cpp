@@ -233,7 +233,12 @@ bool GSDeviceVK::SelectInstanceExtensions(ExtensionList* extension_list, const W
 
 #ifdef __APPLE__
 	// Enable MoltenVK-specific extensions for better iOS stability
+	// Use updated header name with fallback for older Vulkan API versions
+#ifdef VK_MVK_MOLTEN_VK_EXTENSION_NAME
+	SupportsExtension(VK_MVK_MOLTEN_VK_EXTENSION_NAME, false);
+#else
 	SupportsExtension(VK_MVK_MOLTENVK_EXTENSION_NAME, false);
+#endif
 #endif
 
 	// VK_EXT_debug_utils
@@ -877,14 +882,16 @@ bool GSDeviceVK::CreateAllocator()
 	if (m_optional_extensions.vk_ext_memory_budget)
 		ci.flags |= VMA_ALLOCATOR_CREATE_EXT_MEMORY_BUDGET_BIT;
 
-#ifdef __APPLE__
-	// iOS-specific memory limits to prevent heap crashes on M4 iPad Pro
+	// Single declaration of heap_size_limits to avoid linker conflicts
 	std::array<VkDeviceSize, VK_MAX_MEMORY_HEAPS> heap_size_limits;
 	heap_size_limits.fill(VK_WHOLE_SIZE);
-	
+	bool heap_limits_set = false;
+
 	VkPhysicalDeviceMemoryProperties memory_properties;
 	vkGetPhysicalDeviceMemoryProperties(m_physical_device, &memory_properties);
-	
+
+#ifdef __APPLE__
+	// iOS-specific memory limits to prevent heap crashes on M4 iPad Pro
 	// Limit memory usage on iOS to prevent crashes
 	for (u32 i = 0; i < memory_properties.memoryHeapCount; i++)
 	{
@@ -894,27 +901,22 @@ bool GSDeviceVK::CreateAllocator()
 		if (heap.size > IOS_HEAP_LIMIT)
 		{
 			heap_size_limits[i] = IOS_HEAP_LIMIT;
+			heap_limits_set = true;
 			Console.WriteLn("VK: Limiting iOS memory heap #%u to %.2f MB", i, 
 				static_cast<float>(IOS_HEAP_LIMIT) / 1048576.0f);
 		}
 	}
-	ci.pHeapSizeLimit = heap_size_limits.data();
 #endif
 
 	// Limit usage of the DEVICE_LOCAL upload heap when we're using a debug device.
 	// On NVIDIA drivers, it results in frequently running out of device memory when trying to
 	// play back captures in RenderDoc, making life very painful. Re-BAR GPUs should be fine.
-	constexpr VkDeviceSize UPLOAD_HEAP_SIZE_THRESHOLD = 512 * 1024 * 1024;
-	constexpr VkMemoryPropertyFlags UPLOAD_HEAP_PROPERTIES =
-		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
-	std::array<VkDeviceSize, VK_MAX_MEMORY_HEAPS> heap_size_limits;
 	if (GSConfig.UseDebugDevice)
 	{
-		VkPhysicalDeviceMemoryProperties memory_properties;
-		vkGetPhysicalDeviceMemoryProperties(m_physical_device, &memory_properties);
+		constexpr VkDeviceSize UPLOAD_HEAP_SIZE_THRESHOLD = 512 * 1024 * 1024;
+		constexpr VkMemoryPropertyFlags UPLOAD_HEAP_PROPERTIES =
+			VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
 
-		bool has_upload_heap = false;
-		heap_size_limits.fill(VK_WHOLE_SIZE);
 		for (u32 i = 0; i < memory_properties.memoryTypeCount; i++)
 		{
 			// Look for any memory types which are upload-like.
@@ -931,13 +933,14 @@ bool GSDeviceVK::CreateAllocator()
 				Console.Warning("VK: Disabling allocation from upload heap #%u (%.2f MB) due to debug device.",
 					type.heapIndex, static_cast<float>(heap.size) / 1048576.0f);
 				heap_size_limits[type.heapIndex] = 0;
-				has_upload_heap = true;
+				heap_limits_set = true;
 			}
 		}
-
-		if (has_upload_heap)
-			ci.pHeapSizeLimit = heap_size_limits.data();
 	}
+
+	// Apply heap limits if any were set
+	if (heap_limits_set)
+		ci.pHeapSizeLimit = heap_size_limits.data();
 
 	VkResult res = vmaCreateAllocator(&ci, &m_allocator);
 	if (res != VK_SUCCESS)
