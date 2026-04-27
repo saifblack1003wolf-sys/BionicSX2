@@ -12,29 +12,30 @@ jobs:
         run: |
           curl -L https://github.com/KhronosGroup/MoltenVK/releases/download/v1.4.1/MoltenVK-ios.tar -o MoltenVK.tar
           tar -xf MoltenVK.tar
-          
-          # إنشاء مجلد باسم فريد بعيداً عن كلمة Frameworks الاعتيادية
-          mkdir -p MY_IOS_LIBS
-          
-          # نسخ الملف وتغيير اسمه داخلياً للتمويه
-          cp -Ra MoltenVK/MoltenVK/static/MoltenVK.xcframework/ios-arm64/MoltenVK.framework MY_IOS_LIBS/
-          
-          # حذف المصدر تماماً
+
+          mkdir -p MY_SAFE_LIBS
+          cp -Ra MoltenVK/MoltenVK/static/MoltenVK.xcframework/ios-arm64/MoltenVK.framework MY_SAFE_LIBS/
+
           rm -rf MoltenVK/
           rm -rf MoltenVK.tar
-          
+
+          mkdir -p Frameworks
+          cp -Ra MY_SAFE_LIBS/MoltenVK.framework Frameworks/
+
           echo "Verified unique path:"
-          ls -R MY_IOS_LIBS/
+          ls -R MY_SAFE_LIBS/
+          echo "Verified hardcoded Frameworks path:"
+          ls -R Frameworks/
 
       - name: CMake Configuration
         run: |
           rm -rf build/
           cmake -B build -G Xcode \
             -DCMAKE_SYSTEM_NAME=iOS \
-            -DCMAKE_OSX_ARCHITECTURES=arm64 \
             -DCMAKE_OSX_SYSROOT=iphoneos \
-            -DMoltenVK_FRAMEWORK_PATH=$(pwd)/MY_IOS_LIBS/MoltenVK.framework \
-            -DCMAKE_FRAMEWORK_PATH=$(pwd)/MY_IOS_LIBS \
-            -DCMAKE_XCODE_ATTRIBUTE_ONLY_ACTIVE_ARCH=YES
-            
+            -DCMAKE_OSX_ARCHITECTURES=arm64 \
+            -DCMAKE_XCODE_ATTRIBUTE_ONLY_ACTIVE_ARCH=YES \
+            -DMoltenVK_FRAMEWORK_PATH=${{ github.workspace }}/Frameworks/MoltenVK.framework \
+            -DMoltenVK_LIBRARY_PATH=${{ github.workspace }}/Frameworks/MoltenVK.framework
+
           cmake --build build --config Release --target iPSX2
